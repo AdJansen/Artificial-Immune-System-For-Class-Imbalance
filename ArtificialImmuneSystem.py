@@ -110,10 +110,11 @@ class ArtificialImmuneSystem():
 
 
     ####### Mutation ################
-    def mutatePopulation (self, antiPopulation, bounds, binaryColumns : list):
+    def mutatePopulation (self, antiPopulation, bounds, binaryColumns : list, mutationRate : float = 1.0):
         #antiPopulation is the population of antibodies to be mutated
         #bounds is a dictionary of the bounds of each column in the population
         #binaryColumns is a list of the columns that are binary
+        #mutationRate denotes how much the antibodies can mutate each round, 1.0 is the default, 0.0 is no mutation, 2.0 is double mutation rate
         #returns a new mutated population of antibodies
         antiPopulation = antiPopulation.copy()
         for col in antiPopulation:
@@ -121,7 +122,7 @@ class ArtificialImmuneSystem():
                 
                 antiPopulation[col] = antiPopulation[col].map(lambda x : (random.randint(0,1)))
             else:
-                bnd_range = bounds[col][1] - bounds[col][0] #total range of bounds is high - low
+                bnd_range = bounds[col][1]*mutationRate - bounds[col][0]*mutationRate #total range of bounds is high - low
 
                 #Setting the low and high bounds to be centered around 0
                 hi_bnd = bnd_range/2 
