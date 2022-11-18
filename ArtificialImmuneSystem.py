@@ -118,7 +118,9 @@ class ArtificialImmuneSystem():
         #returns a new mutated population of antibodies
         antiPopulation = antiPopulation.copy()
         for col in antiPopulation:
-            if col in binaryColumns: #Binary Columns must be handled differently than continuous
+            if bounds[col][0] == bounds[col][1]:
+               continue
+            elif col in binaryColumns: #Binary Columns must be handled differently than continuous
                 
                 antiPopulation[col] = antiPopulation[col].map(lambda x : (random.randint(0,1)))
             else:
