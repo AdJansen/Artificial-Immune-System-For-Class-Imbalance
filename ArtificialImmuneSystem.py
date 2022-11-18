@@ -122,7 +122,7 @@ class ArtificialImmuneSystem():
                 
                 antiPopulation[col] = antiPopulation[col].map(lambda x : (random.randint(0,1)))
             else:
-                bnd_range = bounds[col][1]*mutationRate - bounds[col][0]*mutationRate #total range of bounds is high - low
+                bnd_range = (bounds[col][1] - bounds[col][0])*mutationRate #total range of bounds is high - low
 
                 #Setting the low and high bounds to be centered around 0
                 hi_bnd = bnd_range/2 
