@@ -180,66 +180,57 @@ class ArtificialImmuneSystem():
 
         return features, labels
 
-    def AIS(self,df,max_rounds, totalPopulation):
+    #minorityDF      - the minority dataframe
+    #df              - the original dataframe
+    #max_rounds      - the maximum number of rounds(loops) of AIS 
+    #stopping_cond   - the number of rounds without significant changes to accuracy before stopping the function
+    #totalPopulation - the number of elements we want to add to the minority class
+    #model           - the model to be used to evaluate the dataset during AIS
+    #K-folds         - the number of segments for k-fold cross validation
+    #scorer          - the scoring metric when evaluating the dataset
 
-        #change hardcoded
-        #should be the minority df instead
+    def AIS(self,minorityDF,df,max_rounds, stopping_cond, totalPopulation, binaryColumns : list, model, K_folds, scorer):
+
+        #add code to find binary columns for creation
         
-        initial_population, bounds = self.Creation(df,totalPopulation,['5'], weightingFunction='uniform')
+        current_population, bounds = self.Creation(minorityDF,totalPopulation,binaryColumns, weightingFunction='uniform')
         
-        antibody_population = self.mutatePopulation(initial_population,bounds,['5'])
+        antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
         
         count = 0
         no_change = 0
 
-        current_gen, current_labels = self.separate_df(initial_population)
-        next_gen, next_labels = self.separate_df(antibody_population)
-    
-        while( (count<max_rounds) and (no_change < 5) ):
-            count+=1
+        #the current antibody population concatenated to the original dataframe
+        current_df = pd.concat([df,current_population],ignore_index=True)
+        #current_df split into features and labels
+        current_gen, current_labels = self.separate_df(current_df)
 
-            #change hardcoded
-            if(self.comparePopulations(current_gen,next_gen,current_labels,next_labels,svm.SVC(random_state=0), 5, 'f1_macro')):
+        #the next generation antibody population concatenated to the original dataframe
+        next_df = pd.concat([df,antibody_population],ignore_index=True)
+        #next_df split into features and labels
+        next_gen, next_labels = self.separate_df(next_df)
+    
+        while( (count < max_rounds) and (no_change < stopping_cond) ):
+            count+=1
+            
+            if(self.comparePopulations2(current_gen,next_gen,current_labels,next_labels,model, K_folds, scorer)):
                 
                 no_change = 0
 
+                current_population = antibody_population.copy()
                 current_gen = next_gen.copy()
                 current_labels = next_labels.copy()
 
-                current = current_gen.copy()
-                for col in current_labels:
-                    current = current.join(current_labels[col])
-                #current.append(current_labels)
-
                 #need to update bounds
-                antibody_population = self.mutatePopulation(current,bounds,['5'])
+                bounds = self.get_bounds(current_population)
+                antibody_population = self.mutatePopulation(current_population,bounds,['5'])
                 next_gen, next_labels = self.separate_df(antibody_population)
-
-                # print('obama')
-                # print(current_labels)
-                # print(next_labels)
-                
-
             else:
 
                 no_change+=1
-                # will this give the same thing every time?
-                current = current_gen.copy()
-                for col in current_labels:
-                    current = current.join(current_labels[col])
-                #current.co(current_labels)
-                
-                antibody_population = self.mutatePopulation(current,bounds,['5'])
+
+                bounds = self.get_bounds(current_population)
+                antibody_population = self.mutatePopulation(current_population,bounds,['5'])
                 next_gen, next_labels = self.separate_df(antibody_population)
-                current_gen, current_labels = self.separate_df(current)
-                
-                # print('trump')
-                # print(current_labels)
-                # print(next_labels)
-                # print(current_gen)
-                # print(current)
-                # print(antibody_population)
-                
 
-
-        return current_gen, count
+        return current_population, count
