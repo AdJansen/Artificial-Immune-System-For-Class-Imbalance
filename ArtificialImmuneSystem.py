@@ -213,7 +213,7 @@ class ArtificialImmuneSystem():
         while( (count < max_rounds) and (no_change < stopping_cond) ):
             count+=1
             
-            if(self.comparePopulations2(current_gen,next_gen,current_labels,next_labels,model, K_folds, scorer)):
+            if(self.comparePopulations(current_gen,next_gen,current_labels,next_labels,model, K_folds, scorer)):
                 
                 no_change = 0
 
