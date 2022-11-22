@@ -30,6 +30,25 @@ class ArtificialImmuneSystem():
             out[col] = (colMin, colMax)
         return out
 
+    ####### extractMinorityClass ################
+    # TODO need to take the imputed, normalized, and scaled data, as well as the labels, and separate out the minority class
+    def extractBinaryMinorityClass(self, preparedFeatures, labels) -> pd.DataFrame:
+        #preparedFeatures is the dataframe of features, labels is the dataframe of labels
+        #returns a dataframe of the minority class
+        #get counts of each class from labels
+        for col in labels:
+                counts = labels[col].value_counts()
+                #get the minority class
+                minorityLabel = counts.idxmin()
+
+        minorityClass = labels[labels == minorityLabel]
+        minorityClass = minorityClass.dropna()
+        minorityClass = minorityClass.index.values
+        minorityClass = preparedFeatures.loc[minorityClass]
+        return minorityClass
+
+    def getBinaryColumns(self, df) -> list:
+        return list(df.columns[df.nunique() == 2])
 
     ####### Creation ################
     # minorityDF - dataframe containing the minority class
