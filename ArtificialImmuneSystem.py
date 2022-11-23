@@ -31,7 +31,7 @@ class ArtificialImmuneSystem():
         return out
 
     ####### extractMinorityClass ################
-    # TODO need to take the imputed, normalized, and scaled data, as well as the labels, and separate out the minority class
+    
     def extractBinaryMinorityClass(self, preparedFeatures, labels) -> pd.DataFrame:
         #preparedFeatures is the dataframe of features, labels is the dataframe of labels
         #returns a dataframe of the minority class
@@ -253,3 +253,18 @@ class ArtificialImmuneSystem():
                 next_gen, next_labels = self.separate_df(antibody_population)
 
         return current_population, count
+
+
+    def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer):
+        minorityDF = self.extractBinaryMinorityClass(preparedDF, labels)
+        binaryColumns = self.getBinaryColumns(minorityDF)
+        #PreparedDF + Labels = the overall Population
+        overallPopulation = pd.concat([preparedDF,labels],axis=1)
+        #The number of elements we want to add to the minority class
+        requiredPopulation = len(overallPopulation) - (len(minorityDF)*2)
+        
+        oversamples = self.AIS(minorityDF,overallPopulation,max_rounds,stopping_cond,requiredPopulation,binaryColumns,model,K_folds,scorer)
+        
+        return pd.concat([overallPopulation,oversamples],ignore_index=True)
+        
+
