@@ -264,7 +264,7 @@ class ArtificialImmuneSystem():
         requiredPopulation = len(overallPopulation) - (len(minorityDF)*2)
         
         oversamples = self.AIS(minorityDF,overallPopulation,max_rounds,stopping_cond,requiredPopulation,binaryColumns,model,K_folds,scorer)
-        
-        return pd.concat([overallPopulation,oversamples],ignore_index=True)
+        concatDF = pd.concat([overallPopulation,oversamples],ignore_index=True)
+        return (self.separate_df(concatDF))
         
 
