@@ -45,6 +45,8 @@ class ArtificialImmuneSystem():
         minorityClass = minorityClass.dropna()
         minorityClass = minorityClass.index.values
         minorityClass = preparedFeatures.loc[minorityClass]
+        minorityClass = preparedFeatures.loc[minorityClass]
+        minorityClass[labels.columns[0]]=minorityLabel
         return minorityClass
 
     def getBinaryColumns(self, df) -> list:
