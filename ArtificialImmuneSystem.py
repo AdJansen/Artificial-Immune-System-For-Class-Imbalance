@@ -36,7 +36,7 @@ class ArtificialImmuneSystem():
 
     ####### extractMinorityClass ################
     
-    def extractBinaryMinorityClass(self, preparedFeatures, labels) -> pd.DataFrame:
+    def extractBinaryMinorityClass( preparedFeatures, labels) -> pd.DataFrame:
         #preparedFeatures is the dataframe of features, labels is the dataframe of labels
         #returns a dataframe of the minority class
         #get counts of each class from labels
@@ -48,7 +48,6 @@ class ArtificialImmuneSystem():
         minorityClass = labels[labels == minorityLabel]
         minorityClass = minorityClass.dropna()
         minorityClass = minorityClass.index.values
-        minorityClass = preparedFeatures.loc[minorityClass]
         minorityClass = preparedFeatures.loc[minorityClass]
         minorityClass[labels.columns[0]]=minorityLabel
         return minorityClass
@@ -156,34 +155,37 @@ class ArtificialImmuneSystem():
     #Population_features, population_labels are the generated population we want to evaluate
     #Here scorer has to be a function that takes y_pred, y_true and returns a score, not implemented yet
     def fitnessCV(self, model, original_features, original_labels, population_features, population_labels, scorer, iterations):
-
-        #TODO:train test split makes train set smaller, we should sample the population based on he difference of the majority class and minority class in origin_feat_train
+        #TODO: train_features or train_labels had 1 extra row, need to fix
+        #train test split makes train set smaller, we should sample the population based on he difference of the majority class and minority class in origin_feat_train
         origin_feat_train, origin_feat_test, origin_labels_train, origin_labels_test = train_test_split(original_features, original_labels, test_size=0.33)
         
         train_features = pd.concat([origin_feat_train, population_features],ignore_index=True)
         train_labels = pd.concat([origin_labels_train, population_labels],ignore_index=True)
 
-        #TODO:look into group parameter of cross_validate
-        #TODO:here scoring can be multiple values
+        #look into group parameter of cross_validate
+        #here scoring can be multiple values
+        
         cval_scores = cross_validate(model, train_features, train_labels.values.ravel(), scoring = scorer, cv = iterations, return_train_score = True, return_estimator = True)
 
         #look at format of scores, get estimators and use them to predict test
 
-        test_scores =[]
+        test_scores = []
+        cval_test_scores =cval_scores['test_score']
         count = 0 
         for estimator in cval_scores['estimator']:
             
             estimator.fit(train_features, train_labels.values.ravel())
             predictions = estimator.predict(origin_feat_test)
 
-            #TODO:hard coded f1_score, find a way to pass in function for scoring?
+            #hard coded f1_score, find a way to pass in function for scoring?
             score = f1_score(origin_labels_test, predictions) 
 
-            #TODO:here I just took the mean of the 2 scores, could we use something else?
-            mean_score = (score + cval_scores)/2
+            #here I just took the mean of the 2 scores, could we use something else?
+            mean_score = (score + cval_test_scores[count])/2
+            count+=1
             test_scores.append(mean_score)
         
-        #TODO:here I just took the mean of the array of all scores, could we use something else?
+        #here I just took the mean of the array of all scores, could we use something else?
         return fmean(test_scores)
 
 
@@ -269,7 +271,7 @@ class ArtificialImmuneSystem():
     #K-folds         - the number of segments for k-fold cross validation
     #scorer          - the scoring metric when evaluating the dataset
 
-    def AIS(self,minorityDF,df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer):
+    def AIS(self, minorityDF,df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer):
 
         #add code to find binary columns for creation
         binaryColumns = self.getBinaryColumns(minorityDF)
@@ -281,11 +283,12 @@ class ArtificialImmuneSystem():
         count = 0
         no_change = 0
 
-        
+        original_gen, original_labels = self.separate_df(df, label)
         #created population split into features and labels
         current_gen, current_labels = self.separate_df(current_population, label_col=label)
 
-        current_score = self.fitnessCV(model, df, df[label], current_gen, current_labels, scorer, K_folds)
+        
+        current_score = self.fitnessCV(model, original_gen, original_labels, current_gen, current_labels, scorer, K_folds)
 
         # #the next generation antibody population concatenated to the original dataframe
         # next_df = pd.concat([df,antibody_population],ignore_index=True) #TODO:REMOVE
@@ -294,7 +297,7 @@ class ArtificialImmuneSystem():
     
         while( (count < max_rounds) and (no_change < stopping_cond) ):
             count+=1
-            change_flg, score = self.comparePopulationsCV(current_score, df, df[label], next_gen, next_labels, model, K_folds, scorer)
+            change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer)
             if (change_flg):
                 
                 no_change = 0
@@ -306,7 +309,7 @@ class ArtificialImmuneSystem():
                 #need to update bounds
                 bounds = self.get_bounds(current_population)
                 antibody_population = self.mutatePopulation(current_population,bounds,['5'])
-                next_gen, next_labels = self.separate_df(antibody_population)
+                next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                 
             else:
 
@@ -314,7 +317,7 @@ class ArtificialImmuneSystem():
 
                 bounds = self.get_bounds(current_population)
                 antibody_population = self.mutatePopulation(current_population,bounds,['5'])
-                next_gen, next_labels = self.separate_df(antibody_population)
+                next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                 
             current_score = score #Score will only change if the new population is better than the old population
 
@@ -322,6 +325,7 @@ class ArtificialImmuneSystem():
 
 
     def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer):
+        #preparedDF is the dataframe of features, labels is the dataframe of labels
         minorityDF = self.extractBinaryMinorityClass(preparedDF, labels)
         
         #PreparedDF + Labels = the overall Population
@@ -329,8 +333,8 @@ class ArtificialImmuneSystem():
         #The number of elements we want to add to the minority class
         requiredPopulation = len(overallPopulation) - (len(minorityDF)*2)
         
-        oversamples,_ = self.AIS(minorityDF,overallPopulation,labels, max_rounds,stopping_cond,requiredPopulation,model,K_folds,scorer)
+        oversamples,_ = self.AIS(minorityDF,overallPopulation,labels.columns, max_rounds,stopping_cond,requiredPopulation,model,K_folds,scorer)
         concatDF = pd.concat([overallPopulation,oversamples],ignore_index=True)
-        return (self.separate_df(concatDF))
+        return (self.separate_df(concatDF, labels.columns[0]))
         
 
