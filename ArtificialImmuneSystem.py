@@ -238,22 +238,22 @@ class ArtificialImmuneSystem():
         print("score1: " +str(score1))
         print("score2: " +str(score2))
 
-        #is 0.005 too big?
+        #TODO:is 0.005 too big?
         if abs(score1 - score2) < 0.005:
-            return False
+            return False, score1
         elif (score1>score2):
-            return False
+            return False, score1
         else:
-            return True
+            return True, score2
 
     #need a comparePopulationsBasic for fitnessBasic
 
     #TODO : add parameter that defines which column is the label
     #separate a df into features and labels
-    def separate_df(self, df):
+    def separate_df(self, df, label_col):
 
         columns = df.columns.to_list()
-        columns_drop = columns.pop(-1)
+        columns_drop = columns.pop(label_col)
 
         labels = df.drop(columns, axis=1)
         features = df.drop(columns_drop, axis=1)
@@ -269,10 +269,11 @@ class ArtificialImmuneSystem():
     #K-folds         - the number of segments for k-fold cross validation
     #scorer          - the scoring metric when evaluating the dataset
 
-    def AIS(self,minorityDF,df,max_rounds, stopping_cond, totalPopulation, binaryColumns : list, model, K_folds, scorer):
+    def AIS(self,minorityDF,df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer):
 
         #add code to find binary columns for creation
-        
+        binaryColumns = self.getBinaryColumns(minorityDF)
+
         current_population, bounds = self.Creation(minorityDF,totalPopulation,binaryColumns, weightingFunction='uniform')
         
         antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
@@ -280,20 +281,21 @@ class ArtificialImmuneSystem():
         count = 0
         no_change = 0
 
-        #the current antibody population concatenated to the original dataframe
-        current_df = pd.concat([df,current_population],ignore_index=True)
-        #current_df split into features and labels
-        current_gen, current_labels = self.separate_df(current_df)
+        
+        #created population split into features and labels
+        current_gen, current_labels = self.separate_df(current_population, label_col=label)
 
-        #the next generation antibody population concatenated to the original dataframe
-        next_df = pd.concat([df,antibody_population],ignore_index=True)
+        current_score = self.fitnessCV(model, df, df[label], current_gen, current_labels, scorer, K_folds)
+
+        # #the next generation antibody population concatenated to the original dataframe
+        # next_df = pd.concat([df,antibody_population],ignore_index=True) #TODO:REMOVE
         #next_df split into features and labels
-        next_gen, next_labels = self.separate_df(next_df)
+        next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
     
         while( (count < max_rounds) and (no_change < stopping_cond) ):
             count+=1
-            
-            if(self.comparePopulations(current_gen,next_gen,current_labels,next_labels,model, K_folds, scorer)):
+            change_flg, score = self.comparePopulationsCV(current_score, df, df[label], next_gen, next_labels, model, K_folds, scorer)
+            if (change_flg):
                 
                 no_change = 0
 
@@ -305,6 +307,7 @@ class ArtificialImmuneSystem():
                 bounds = self.get_bounds(current_population)
                 antibody_population = self.mutatePopulation(current_population,bounds,['5'])
                 next_gen, next_labels = self.separate_df(antibody_population)
+                
             else:
 
                 no_change+=1
@@ -312,19 +315,21 @@ class ArtificialImmuneSystem():
                 bounds = self.get_bounds(current_population)
                 antibody_population = self.mutatePopulation(current_population,bounds,['5'])
                 next_gen, next_labels = self.separate_df(antibody_population)
+                
+            current_score = score #Score will only change if the new population is better than the old population
 
         return current_population, count
 
 
     def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer):
         minorityDF = self.extractBinaryMinorityClass(preparedDF, labels)
-        binaryColumns = self.getBinaryColumns(minorityDF)
+        
         #PreparedDF + Labels = the overall Population
         overallPopulation = pd.concat([preparedDF,labels],axis=1)
         #The number of elements we want to add to the minority class
         requiredPopulation = len(overallPopulation) - (len(minorityDF)*2)
         
-        oversamples,_ = self.AIS(minorityDF,overallPopulation,max_rounds,stopping_cond,requiredPopulation,binaryColumns,model,K_folds,scorer)
+        oversamples,_ = self.AIS(minorityDF,overallPopulation,labels, max_rounds,stopping_cond,requiredPopulation,model,K_folds,scorer)
         concatDF = pd.concat([overallPopulation,oversamples],ignore_index=True)
         return (self.separate_df(concatDF))
         
