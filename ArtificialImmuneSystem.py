@@ -1,19 +1,23 @@
 import pandas as pd;
 import random;
 from statistics import fmean, stdev;
+from collections import Counter
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn import svm
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold
 from sklearn.metrics import f1_score
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, cross_validate
+from sklearn.model_selection import train_test_split
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
 from sklearn.metrics import DistanceMetric
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import LocalOutlierFactor
 
 class ArtificialImmuneSystem():
     
@@ -129,6 +133,59 @@ class ArtificialImmuneSystem():
         dist = DistanceMetric.get_metric(metric)
         return dist.pairwise(x,y)
 
+    #Original features, original labels are the original df before any oversampling
+    #Population_features, population_labels are the generated population we want to evaluate
+    #Here scorer has to be a function that takes y_pred, y_true and returns a score, not implemented yet
+    def fitnessBasic(self, model, original_features, original_labels, population_features, population_labels, scorer):
+
+        #TODO:train test split makes train set smaller, we should sample the population based on he difference of the majority class and minority class in origin_feat_train
+        origin_feat_train, origin_feat_test, origin_labels_train, origin_labels_test = train_test_split(original_features, original_labels, test_size=0.33)
+        
+        train_features = pd.concat([origin_feat_train, population_features],ignore_index=True)
+        train_labels = pd.concat([origin_labels_train, population_labels],ignore_index=True)
+
+        model.fit(train_features, train_labels.values.ravel())
+        predictions = model.predict(origin_feat_test)
+
+        #need more params?
+        #TODO:hard coded f1_score, find a way to pass in function for scoring?
+        score = f1_score(origin_labels_test.values.ravel(), predictions)
+        return score
+
+    #Original features, original labels are the original df before any oversampling
+    #Population_features, population_labels are the generated population we want to evaluate
+    #Here scorer has to be a function that takes y_pred, y_true and returns a score, not implemented yet
+    def fitnessCV(self, model, original_features, original_labels, population_features, population_labels, scorer, iterations):
+
+        #TODO:train test split makes train set smaller, we should sample the population based on he difference of the majority class and minority class in origin_feat_train
+        origin_feat_train, origin_feat_test, origin_labels_train, origin_labels_test = train_test_split(original_features, original_labels, test_size=0.33)
+        
+        train_features = pd.concat([origin_feat_train, population_features],ignore_index=True)
+        train_labels = pd.concat([origin_labels_train, population_labels],ignore_index=True)
+
+        #TODO:look into group parameter of cross_validate
+        #TODO:here scoring can be multiple values
+        cval_scores = cross_validate(model, train_features, train_labels.values.ravel(), scoring = scorer, cv = iterations, return_train_score = True, return_estimator = True)
+
+        #look at format of scores, get estimators and use them to predict test
+
+        test_scores =[]
+        count = 0 
+        for estimator in cval_scores['estimator']:
+            
+            estimator.fit(train_features, train_labels.values.ravel())
+            predictions = estimator.predict(origin_feat_test)
+
+            #TODO:hard coded f1_score, find a way to pass in function for scoring?
+            score = f1_score(origin_labels_test, predictions) 
+
+            #TODO:here I just took the mean of the 2 scores, could we use something else?
+            mean_score = (score + cval_scores)/2
+            test_scores.append(mean_score)
+        
+        #TODO:here I just took the mean of the array of all scores, could we use something else?
+        return fmean(test_scores)
+
 
     ####### Mutation ################
     def mutatePopulation (self, antiPopulation, bounds, binaryColumns : list, mutationRate : float = 1.0):
@@ -140,7 +197,7 @@ class ArtificialImmuneSystem():
         antiPopulation = antiPopulation.copy()
         for col in antiPopulation:
             if bounds[col][0] == bounds[col][1]:
-               continue
+                continue
             elif col in binaryColumns: #Binary Columns must be handled differently than continuous
                 
                 antiPopulation[col] = antiPopulation[col].map(lambda x : (random.randint(0,1)))
@@ -159,25 +216,6 @@ class ArtificialImmuneSystem():
         return antiPopulation
 
 
-    def comparePopulationsDepreciated(self, population1, population2, labels1, labels2, estimator, iterations, scorer):
-
-        score1 = fmean(self.fitness(estimator, population1, labels1.values.ravel(), iterations, scorer))
-        score2 = fmean(self.fitness(estimator, population2, labels2.values.ravel(), iterations, scorer))
-
-        if score1 > score2:
-            winning_population = population1
-            winning_labels = labels1
-        else:
-            winning_population = population2
-            winning_labels = labels2
-
-        for col in winning_labels:
-            winning_population = winning_population.join(winning_labels[col])
-
-        return winning_population
-
-
-
     def comparePopulations(self,population1, population2, labels1, labels2, estimator, iterations, scorer):
         score1 = fmean(self.fitness(estimator, population1, labels1.values.ravel(), iterations, scorer))
         score2 = fmean(self.fitness(estimator, population2, labels2.values.ravel(), iterations, scorer))
@@ -188,6 +226,27 @@ class ArtificialImmuneSystem():
             return False
         else:
             return True
+
+    #takes in the previous population's score, will need to add variable in AIS to track this from previous round
+    # original features and original labels are the original df split into features and labels
+    # population features and population labels are the population df split into features and labels, this is the new population we mutated this round
+    # estimator, iterations, scorer not changed from old compare populaitons
+    def comparePopulationsCV(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations, scorer):
+        score1 = prev_score
+        score2 = self.fitnessCV(estimator, original_features, original_labels, population_features, population_labels, scorer, iterations)
+        
+        print("score1: " +str(score1))
+        print("score2: " +str(score2))
+
+        #is 0.005 too big?
+        if abs(score1 - score2) < 0.005:
+            return False
+        elif (score1>score2):
+            return False
+        else:
+            return True
+
+    #need a comparePopulationsBasic for fitnessBasic
 
     #TODO : add parameter that defines which column is the label
     #separate a df into features and labels
