@@ -255,7 +255,7 @@ class ArtificialImmuneSystem():
     def separate_df(self, df, label_col):
 
         columns = df.columns.to_list()
-        columns_drop = columns.pop(label_col)
+        columns_drop = columns.pop(columns.index(label_col))
 
         labels = df.drop(columns, axis=1)
         features = df.drop(columns_drop, axis=1)
