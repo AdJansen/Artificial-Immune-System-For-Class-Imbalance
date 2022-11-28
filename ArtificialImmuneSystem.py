@@ -36,7 +36,7 @@ class ArtificialImmuneSystem():
 
     ####### extractMinorityClass ################
     
-    def extractBinaryMinorityClass( preparedFeatures, labels) -> pd.DataFrame:
+    def extractBinaryMinorityClass(self, preparedFeatures, labels) -> pd.DataFrame:
         #preparedFeatures is the dataframe of features, labels is the dataframe of labels
         #returns a dataframe of the minority class
         #get counts of each class from labels
