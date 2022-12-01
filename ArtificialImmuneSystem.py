@@ -157,11 +157,25 @@ class ArtificialImmuneSystem():
     def fitnessCV(self, model, original_features, original_labels, population_features, population_labels, scorer, iterations):
         #TODO: train_features or train_labels had 1 extra row, need to fix
         #train test split makes train set smaller, we should sample the population based on he difference of the majority class and minority class in origin_feat_train
-        origin_feat_train, origin_feat_test, origin_labels_train, origin_labels_test = train_test_split(original_features, original_labels, test_size=0.33)
+        origin_feat_train, origin_feat_test, origin_labels_train, origin_labels_test = train_test_split(original_features, original_labels, test_size=0.2)
         
+        print("origin_feat_train before: ", origin_feat_train.shape)
+        print("origin_labels_train before: ", Counter(origin_labels_train['5']))
+        #Expand the size of origin_feat_train by to match the size of original features
+        needed_rows = len(original_features) - len(origin_feat_train)
+        sample_train = (pd.concat([origin_feat_train, origin_labels_train], axis=1))
+        sample_train = sample_train.sample(n=needed_rows, replace=False, ignore_index=True)
+
+
+        origin_feat_train = pd.concat([origin_feat_train, sample_train[original_features.columns.values]], ignore_index=True)
+        origin_labels_train = pd.concat([origin_labels_train, sample_train[original_labels.columns.values]], ignore_index=True)
+        print("origin_feat_train after: ", origin_feat_train.shape)
+        print("population_features: ", population_features.shape)
+        print("origin_labels_train after: ", Counter(origin_labels_train['5']))
+
         train_features = pd.concat([origin_feat_train, population_features],ignore_index=True)
         train_labels = pd.concat([origin_labels_train, population_labels],ignore_index=True)
-
+        
         #look into group parameter of cross_validate
         #here scoring can be multiple values
         
@@ -240,7 +254,7 @@ class ArtificialImmuneSystem():
         print("score1: " +str(score1))
         print("score2: " +str(score2))
 
-        #TODO:is 0.005 too big?
+        
         if abs(score1 - score2) < min_change:
             return False, score1
         elif (score1>score2):
@@ -248,7 +262,7 @@ class ArtificialImmuneSystem():
         else:
             return True, score2
 
-    #TODO: Test this
+
     def comparePopulationsBasic(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations=-1, scorer='', min_change = 0.005):
         score1 = prev_score
         score2 = self.fitnessBasic(estimator, original_features, original_labels, population_features, population_labels)
