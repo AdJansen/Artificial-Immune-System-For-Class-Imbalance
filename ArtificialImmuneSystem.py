@@ -249,7 +249,7 @@ class ArtificialImmuneSystem():
             return True, score2
 
     #TODO: Test this
-    def comparePopulationsBasic(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations, scorer):
+    def comparePopulationsBasic(self, prev_score, original_features, original_labels, population_features, population_labels, estimator):
         score1 = prev_score
         score2 = self.fitnessBasic(estimator, original_features, original_labels, population_features, population_labels)
         
