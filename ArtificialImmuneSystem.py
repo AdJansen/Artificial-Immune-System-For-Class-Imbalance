@@ -235,7 +235,7 @@ class ArtificialImmuneSystem():
     # estimator, iterations, scorer not changed from old compare populaitons
     def comparePopulationsCV(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations, scorer):
         score1 = prev_score
-        score2 = self.fitnessCV(estimator, original_features, original_labels, population_features, population_labels, iterations, scorer)
+        score2 = self.fitnessCV(estimator, original_features, original_labels, population_features, population_labels, scorer, iterations)
         
         print("score1: " +str(score1))
         print("score2: " +str(score2))
