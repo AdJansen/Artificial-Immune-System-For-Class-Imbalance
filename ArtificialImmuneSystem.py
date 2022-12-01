@@ -135,7 +135,7 @@ class ArtificialImmuneSystem():
     #Original features, original labels are the original df before any oversampling
     #Population_features, population_labels are the generated population we want to evaluate
     #Here scorer has to be a function that takes y_pred, y_true and returns a score, not implemented yet
-    def fitnessBasic(self, model, original_features, original_labels, population_features, population_labels, scorer):
+    def fitnessBasic(self, model, original_features, original_labels, population_features, population_labels):
 
         #TODO:train test split makes train set smaller, we should sample the population based on he difference of the majority class and minority class in origin_feat_train
         origin_feat_train, origin_feat_test, origin_labels_train, origin_labels_test = train_test_split(original_features, original_labels, test_size=0.33)
@@ -235,7 +235,7 @@ class ArtificialImmuneSystem():
     # estimator, iterations, scorer not changed from old compare populaitons
     def comparePopulationsCV(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations, scorer):
         score1 = prev_score
-        score2 = self.fitnessCV(estimator, original_features, original_labels, population_features, population_labels, scorer, iterations)
+        score2 = self.fitnessCV(estimator, original_features, original_labels, population_features, population_labels)
         
         print("score1: " +str(score1))
         print("score2: " +str(score2))
@@ -248,7 +248,20 @@ class ArtificialImmuneSystem():
         else:
             return True, score2
 
-    #need a comparePopulationsBasic for fitnessBasic
+    #TODO: Test this
+    def comparePopulationsBasic(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations, scorer):
+        score1 = prev_score
+        score2 = self.fitnessBasic(estimator, original_features, original_labels, population_features, population_labels, scorer, iterations)
+        
+        print("score1: " +str(score1))
+        print("score2: " +str(score2))
+
+        if abs(score1 - score2) < 0.005:
+            return False, score1
+        elif (score1>score2):
+            return False, score1
+        else:
+            return True, score2
 
     #TODO : add parameter that defines which column is the label
     #separate a df into features and labels
