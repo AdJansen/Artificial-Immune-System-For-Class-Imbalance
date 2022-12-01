@@ -218,11 +218,11 @@ class ArtificialImmuneSystem():
         return antiPopulation
 
 
-    def comparePopulations(self,population1, population2, labels1, labels2, estimator, iterations, scorer):
+    def comparePopulations(self,population1, population2, labels1, labels2, estimator, iterations, scorer, min_change = 0.005):
         score1 = fmean(self.fitness(estimator, population1, labels1.values.ravel(), iterations, scorer))
         score2 = fmean(self.fitness(estimator, population2, labels2.values.ravel(), iterations, scorer))
 
-        if abs(score1 - score2) < 0.005:
+        if abs(score1 - score2) < min_change:
             return False
         elif (score1>score2):
             return False
@@ -233,7 +233,7 @@ class ArtificialImmuneSystem():
     # original features and original labels are the original df split into features and labels
     # population features and population labels are the population df split into features and labels, this is the new population we mutated this round
     # estimator, iterations, scorer not changed from old compare populaitons
-    def comparePopulationsCV(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations, scorer):
+    def comparePopulationsCV(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations, scorer, min_change = 0.005):
         score1 = prev_score
         score2 = self.fitnessCV(estimator, original_features, original_labels, population_features, population_labels, scorer, iterations)
         
@@ -241,7 +241,7 @@ class ArtificialImmuneSystem():
         print("score2: " +str(score2))
 
         #TODO:is 0.005 too big?
-        if abs(score1 - score2) < 0.005:
+        if abs(score1 - score2) < min_change:
             return False, score1
         elif (score1>score2):
             return False, score1
@@ -249,14 +249,14 @@ class ArtificialImmuneSystem():
             return True, score2
 
     #TODO: Test this
-    def comparePopulationsBasic(self, prev_score, original_features, original_labels, population_features, population_labels, estimator):
+    def comparePopulationsBasic(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations=-1, scorer='', min_change = 0.005):
         score1 = prev_score
         score2 = self.fitnessBasic(estimator, original_features, original_labels, population_features, population_labels)
         
         print("score1: " +str(score1))
         print("score2: " +str(score2))
 
-        if abs(score1 - score2) < 0.005:
+        if abs(score1 - score2) < min_change:
             return False, score1
         elif (score1>score2):
             return False, score1
@@ -284,7 +284,7 @@ class ArtificialImmuneSystem():
     #K-folds         - the number of segments for k-fold cross validation
     #scorer          - the scoring metric when evaluating the dataset
 
-    def AIS(self, minorityDF,df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer):
+    def AIS(self, minorityDF,df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer, min_change):
 
         #add code to find binary columns for creation
         binaryColumns = self.getBinaryColumns(minorityDF)
@@ -310,7 +310,7 @@ class ArtificialImmuneSystem():
     
         while( (count < max_rounds) and (no_change < stopping_cond) ):
             count+=1
-            change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer)
+            change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer, min_change)
             if (change_flg):
                 
                 no_change = 0
@@ -337,7 +337,7 @@ class ArtificialImmuneSystem():
         return current_population, count
 
 
-    def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer):
+    def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer, min_change = 0.005):
         #preparedDF is the dataframe of features, labels is the dataframe of labels
         minorityDF = self.extractBinaryMinorityClass(preparedDF, labels)
         
@@ -346,7 +346,7 @@ class ArtificialImmuneSystem():
         #The number of elements we want to add to the minority class
         requiredPopulation = len(overallPopulation) - (len(minorityDF)*2)
         
-        oversamples,_ = self.AIS(minorityDF,overallPopulation,labels.columns, max_rounds,stopping_cond,requiredPopulation,model,K_folds,scorer)
+        oversamples,_ = self.AIS(minorityDF,overallPopulation,labels.columns, max_rounds,stopping_cond,requiredPopulation,model,K_folds,scorer, min_change)
         concatDF = pd.concat([overallPopulation,oversamples],ignore_index=True)
         return (self.separate_df(concatDF, labels.columns[0]))
         
