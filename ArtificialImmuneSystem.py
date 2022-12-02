@@ -230,6 +230,76 @@ class ArtificialImmuneSystem():
                 antiPopulation[col] = antiPopulation[col].map(lambda x : x+round(random.uniform(low_bnd,hi_bnd),4))
             
         return antiPopulation
+    
+    #takes a population, generates its LOF score, ranks the data by it and splits it into n_blocks groups of similar data
+    def lof(original_df, population, n_neighbor:int = 20, n_blocks:int = 4):
+
+        size = len(original_df.index)
+
+        df = pd.concat([original_df,population],ignore_index=True)
+        lof = LocalOutlierFactor(n_neighbors = n_neighbor)
+        
+        y_pred = lof.fit_predict(df)
+        X_scores = lof.negative_outlier_factor_
+
+        df["lof"]=X_scores
+        population_with_lof = population.copy()
+        population_with_lof["lof"] = X_scores[size:]
+
+        population_with_lof = population_with_lof.sort_values(by = ['lof'], ignore_index=True)
+        population_with_lof = population_with_lof.drop(columns=['lof'])
+
+        sizeof_block = int(len(population_with_lof.index)/n_blocks)
+        i = 0 
+        j = int(0)
+        result = []
+        
+        while(i < n_blocks):
+            k = int(j+ sizeof_block)
+            p = population_with_lof.iloc[j:k]
+            result.append(p)
+            #result.append(population[j:k])
+            j+=sizeof_block
+            i+=1
+        
+
+        return result
+
+    def get_best_population(self,df, original_features, original_labels, antibody_population, previous_result, label, model, K_folds, scorer):
+
+        result = self.lof(df, antibody_population)
+
+        p1 = pd.concat([result[0],result[1],result[2],previous_result[3]],ignore_index=True)
+        p1_features, p1_labels = self.separate_df(p1, label_col=label)
+        p1_score = self.fitnessCV(model, original_features, original_labels, p1_features, p1_labels, scorer, K_folds)
+
+        p2 = pd.concat([result[0],previous_result[1],result[2],result[3]],ignore_index=True)
+        p2_features, p2_labels = self.separate_df(p2, label_col=label)
+        p2_score = self.fitnessCV(model, original_features, original_labels, p2_features, p2_labels, scorer, K_folds)
+
+        p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
+        p3_features, p3_labels = self.separate_df(p3, label_col=label)
+        p3_score = self.fitnessCV(model, original_features, original_labels, p3_features, p3_labels, scorer, K_folds)
+
+        p4 = pd.concat([previous_result[0],result[1],result[2],result[3]],ignore_index=True)
+        p4_features, p4_labels = self.separate_df(p4, label_col=label)
+        p4_score = self.fitnessCV(model, original_features, original_labels, p4_features, p4_labels, scorer, K_folds)
+
+        scores = [p1_score,p2_score,p3_score,p4_score]
+        max_score = max(scores)
+
+        if(max_score == p1_score):
+            return p1, p1_score
+            
+        if(max_score == p2_score):
+            return p2, p2_score
+
+        if(max_score == p3_score):
+            return p3, p3_score
+        
+        if(max_score == p4_score):
+            return p4, p4_score
+
 
 
     def comparePopulations(self,population1, population2, labels1, labels2, estimator, iterations, scorer, min_change = 0.005):
@@ -276,8 +346,17 @@ class ArtificialImmuneSystem():
             return False, score1
         else:
             return True, score2
-
-    #TODO : add parameter that defines which column is the label
+        
+    def comparePopulations_lof( self, population_score, old_score, min_change):
+        print("old_score: " +str(old_score))
+        print("population_score: " +str(population_score))
+        if abs(population_score - old_score) < min_change:
+            return False, old_score
+        elif (old_score > population_score):
+            return False, old_score
+        else:
+            return True, population_score
+    
     #separate a df into features and labels
     def separate_df(self, df, label_col):
 
@@ -298,7 +377,7 @@ class ArtificialImmuneSystem():
     #K-folds         - the number of segments for k-fold cross validation
     #scorer          - the scoring metric when evaluating the dataset
 
-    def AIS(self, minorityDF,df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer, min_change):
+    def AIS(self, minorityDF, df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer,  min_change = 0.05, use_lof : bool = False):
 
         #add code to find binary columns for creation
         binaryColumns = self.getBinaryColumns(minorityDF)
@@ -314,39 +393,64 @@ class ArtificialImmuneSystem():
         #created population split into features and labels
         current_gen, current_labels = self.separate_df(current_population, label_col=label)
 
-        
         current_score = self.fitnessCV(model, original_gen, original_labels, current_gen, current_labels, scorer, K_folds)
 
         # #the next generation antibody population concatenated to the original dataframe
         # next_df = pd.concat([df,antibody_population],ignore_index=True) #TODO:REMOVE
         #next_df split into features and labels
         next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
-    
-        while( (count < max_rounds) and (no_change < stopping_cond) ):
-            count+=1
-            change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer, min_change)
-            if (change_flg):
-                
-                no_change = 0
 
-                current_population = antibody_population.copy()
-                current_gen = next_gen.copy()
-                current_labels = next_labels.copy()
+        if(use_lof==False):
+            while( (count < max_rounds) and (no_change < stopping_cond) ):
+                count+=1
+                change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer, min_change)
+                if (change_flg):
+                    
+                    no_change = 0
 
-                #need to update bounds
-                bounds = self.get_bounds(current_population)
-                antibody_population = self.mutatePopulation(current_population,bounds,['5'])
-                next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
-                
-            else:
+                    current_population = antibody_population.copy()
 
-                no_change+=1
+                    #need to update bounds
+                    bounds = self.get_bounds(current_population)
+                    antibody_population = self.mutatePopulation(current_population,bounds,['5'])
+                    next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
+                    
+                else:
 
-                bounds = self.get_bounds(current_population)
-                antibody_population = self.mutatePopulation(current_population,bounds,['5'])
-                next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
-                
-            current_score = score #Score will only change if the new population is better than the old population
+                    no_change+=1
+
+                    bounds = self.get_bounds(current_population)
+                    antibody_population = self.mutatePopulation(current_population,bounds,['5'])
+                    next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
+                    
+                current_score = score #Score will only change if the new population is better than the old population
+        
+        else:
+            current_population_lof = self.lof(df, current_population)
+            while( (count < max_rounds) and (no_change < stopping_cond) ):
+
+                count+=1
+                best_population, best_population_score = self.get_best_population(df, original_gen, original_labels, antibody_population, current_population_lof, label, model, K_folds, scorer)
+                change_flg, score = self.comparePopulations_lof(best_population_score, current_score, min_change)
+                if (change_flg):
+                    
+                    no_change = 0
+
+                    current_population = best_population.copy()
+                    current_population_lof = self.lof(df, current_population)
+
+                    #need to update bounds
+                    bounds = self.get_bounds(current_population)
+                    antibody_population = self.mutatePopulation(current_population,bounds,['5'])
+                    
+                else:
+
+                    no_change+=1
+
+                    bounds = self.get_bounds(current_population)
+                    antibody_population = self.mutatePopulation(current_population,bounds,['5'])
+                    
+                current_score = score #Score will only change if the new population is better than the old population
 
         return current_population, count
 
