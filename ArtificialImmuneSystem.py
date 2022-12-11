@@ -159,8 +159,8 @@ class ArtificialImmuneSystem():
         #train test split makes train set smaller, we should sample the population based on he difference of the majority class and minority class in origin_feat_train
         origin_feat_train, origin_feat_test, origin_labels_train, origin_labels_test = train_test_split(original_features, original_labels, test_size=0.2)
         
-        print("origin_feat_train before: ", origin_feat_train.shape)
-        print("origin_labels_train before: ", Counter(origin_labels_train['5']))
+        #print("origin_feat_train before: ", origin_feat_train.shape)
+        #print("origin_labels_train before: ", Counter(origin_labels_train['5']))
         #Expand the size of origin_feat_train by to match the size of original features
         needed_rows = len(original_features) - len(origin_feat_train)
         sample_train = (pd.concat([origin_feat_train, origin_labels_train], axis=1))
@@ -169,9 +169,9 @@ class ArtificialImmuneSystem():
 
         origin_feat_train = pd.concat([origin_feat_train, sample_train[original_features.columns.values]], ignore_index=True)
         origin_labels_train = pd.concat([origin_labels_train, sample_train[original_labels.columns.values]], ignore_index=True)
-        print("origin_feat_train after: ", origin_feat_train.shape)
-        print("population_features: ", population_features.shape)
-        print("origin_labels_train after: ", Counter(origin_labels_train['5']))
+        #print("origin_feat_train after: ", origin_feat_train.shape)
+        #print("population_features: ", population_features.shape)
+        #print("origin_labels_train after: ", Counter(origin_labels_train['5']))
 
         train_features = pd.concat([origin_feat_train, population_features],ignore_index=True)
         train_labels = pd.concat([origin_labels_train, population_labels],ignore_index=True)
