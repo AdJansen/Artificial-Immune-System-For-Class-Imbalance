@@ -195,8 +195,8 @@ class ArtificialImmuneSystem():
             score = f1_score(origin_labels_test, predictions) 
 
             #here I just took the mean of the 2 scores, could we use something else?
-            #mean_score = (score + cval_test_scores[count])/2
-            mean_score = (score * 0.67) + (cval_test_scores[count] * 0.33)
+            mean_score = (score + cval_test_scores[count])/2
+            
             count+=1
             test_scores.append(mean_score)
         
