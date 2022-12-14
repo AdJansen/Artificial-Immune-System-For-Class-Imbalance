@@ -195,6 +195,7 @@ class ArtificialImmuneSystem():
             score = f1_score(origin_labels_test, predictions) 
 
             #here I just took the mean of the 2 scores, could we use something else?
+            #using other splits did not change much
             mean_score = (score + cval_test_scores[count])/2
             
             count+=1
@@ -286,7 +287,20 @@ class ArtificialImmuneSystem():
         p4_features, p4_labels = self.separate_df(p4, label_col=label)
         p4_score = self.fitnessCV(model, original_features, original_labels, p4_features, p4_labels, scorer, K_folds)
 
-        scores = [p1_score,p2_score,p3_score,p4_score]
+        #trying out other combinations (will nuke runtime)
+        p5 = pd.concat([result[0],result[1],result[2],result[3]],ignore_index=True)
+        p5_features, p5_labels = self.separate_df(p5, label_col=label)
+        p5_score = self.fitnessCV(model, original_features, original_labels, p5_features, p5_labels, scorer, K_folds)
+
+        p6 = pd.concat([result[0],previous_result[1],previous_result[2],previous_result[3]],ignore_index=True)
+        p6_features, p6_labels = self.separate_df(p6, label_col=label)
+        p6_score = self.fitnessCV(model, original_features, original_labels, p6_features, p6_labels, scorer, K_folds)
+
+        p7 = pd.concat([previous_result[0],result[1],previous_result[2],previous_result[3]],ignore_index=True)
+        p7_features, p7_labels = self.separate_df(p7, label_col=label)
+        p7_score = self.fitnessCV(model, original_features, original_labels, p7_features, p7_labels, scorer, K_folds)
+
+        scores = [p1_score,p2_score,p3_score,p4_score,p5_score,p6_score,p7_score]
         max_score = max(scores)
 
         if(max_score == p1_score):
@@ -301,7 +315,17 @@ class ArtificialImmuneSystem():
         if(max_score == p4_score):
             return p4, p4_score
 
+        if(max_score == p5_score):
+            print("P5 used")
+            return p5, p5_score
 
+        if(max_score == p6_score):
+            print("P6 used")
+            return p6, p6_score
+
+        if(max_score == p7_score):
+            print("P7 used")
+            return p7, p7_score
 
     def comparePopulations(self,population1, population2, labels1, labels2, estimator, iterations, scorer, min_change = 0.005):
         score1 = fmean(self.fitness(estimator, population1, labels1.values.ravel(), iterations, scorer))
