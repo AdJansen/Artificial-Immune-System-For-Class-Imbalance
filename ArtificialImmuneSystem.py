@@ -403,14 +403,14 @@ class ArtificialImmuneSystem():
     #K-folds         - the number of segments for k-fold cross validation
     #scorer          - the scoring metric when evaluating the dataset
 
-    def AIS(self, minorityDF, df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer,  min_change : float = 0.005, use_lof : bool = False):
+    def AIS(self, minorityDF, df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer,  min_change : float = 0.005, use_lof : bool = False, mutation_rate : float = 1.0):
 
         #add code to find binary columns for creation
         binaryColumns = self.getBinaryColumns(minorityDF)
 
         current_population, bounds = self.Creation(minorityDF,totalPopulation,binaryColumns, weightingFunction='uniform')
         
-        antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+        antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
         
         count = 0
         no_change = 0
@@ -438,7 +438,7 @@ class ArtificialImmuneSystem():
 
                     #need to update bounds
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate=mutation_rate)
                     next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                     
                 else:
@@ -446,7 +446,7 @@ class ArtificialImmuneSystem():
                     no_change+=1
 
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate=mutation_rate)
                     next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                     
                 current_score = score #Score will only change if the new population is better than the old population
@@ -468,21 +468,21 @@ class ArtificialImmuneSystem():
 
                     #need to update bounds
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
                     
                 else:
 
                     no_change+=1
 
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
                     
                 current_score = score #Score will only change if the new population is better than the old population
 
         return current_population, count
 
 
-    def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer, min_change, use_lof):
+    def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer, min_change, use_lof, mutation_rate : float = 1.0):
         #preparedDF is the dataframe of features, labels is the dataframe of labels
         minorityDF = self.extractBinaryMinorityClass(preparedDF, labels)
         
@@ -491,7 +491,7 @@ class ArtificialImmuneSystem():
         #The number of elements we want to add to the minority class
         requiredPopulation = len(overallPopulation) - (len(minorityDF)*2)
         
-        oversamples,_ = self.AIS(minorityDF,overallPopulation,labels.columns, max_rounds,stopping_cond,requiredPopulation,model,K_folds,scorer, min_change, use_lof)
+        oversamples,_ = self.AIS(minorityDF,overallPopulation,labels.columns, max_rounds,stopping_cond,requiredPopulation,model,K_folds,scorer, min_change, use_lof, mutation_rate = mutation_rate)
         concatDF = pd.concat([overallPopulation,oversamples],ignore_index=True)
         return (self.separate_df(concatDF, labels.columns[0]))
         
