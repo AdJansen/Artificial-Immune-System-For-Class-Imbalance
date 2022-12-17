@@ -279,18 +279,18 @@ class ArtificialImmuneSystem():
         p2_features, p2_labels = self.separate_df(p2, label_col=label)
         p2_score = self.fitnessCV(model, original_features, original_labels, p2_features, p2_labels, scorer, K_folds)
 
-        p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
-        p3_features, p3_labels = self.separate_df(p3, label_col=label)
-        p3_score = self.fitnessCV(model, original_features, original_labels, p3_features, p3_labels, scorer, K_folds)
+        # p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
+        # p3_features, p3_labels = self.separate_df(p3, label_col=label)
+        # p3_score = self.fitnessCV(model, original_features, original_labels, p3_features, p3_labels, scorer, K_folds)
 
-        p4 = pd.concat([previous_result[0],result[1],result[2],result[3]],ignore_index=True)
-        p4_features, p4_labels = self.separate_df(p4, label_col=label)
-        p4_score = self.fitnessCV(model, original_features, original_labels, p4_features, p4_labels, scorer, K_folds)
+        # p4 = pd.concat([previous_result[0],result[1],result[2],result[3]],ignore_index=True)
+        # p4_features, p4_labels = self.separate_df(p4, label_col=label)
+        # p4_score = self.fitnessCV(model, original_features, original_labels, p4_features, p4_labels, scorer, K_folds)
 
 
-        # p5 = pd.concat([result[0],result[1],result[2],result[3]],ignore_index=True)
-        # p5_features, p5_labels = self.separate_df(p5, label_col=label)
-        # p5_score = self.fitnessCV(model, original_features, original_labels, p5_features, p5_labels, scorer, K_folds)
+        p5 = pd.concat([result[0],result[1],result[2],result[3]],ignore_index=True)
+        p5_features, p5_labels = self.separate_df(p5, label_col=label)
+        p5_score = self.fitnessCV(model, original_features, original_labels, p5_features, p5_labels, scorer, K_folds)
 
         # #trying out other combinations (will nuke runtime)
         # p6 = pd.concat([result[0],previous_result[1],previous_result[2],previous_result[3]],ignore_index=True)
@@ -301,7 +301,8 @@ class ArtificialImmuneSystem():
         # p7_features, p7_labels = self.separate_df(p7, label_col=label)
         # p7_score = self.fitnessCV(model, original_features, original_labels, p7_features, p7_labels, scorer, K_folds)
 
-        scores = [p1_score,p2_score,p3_score,p4_score]
+        #scores = [p1_score,p2_score,p3_score,p4_score]
+        scores = [p1_score,p2_score]
         max_score = max(scores)
 
         if(max_score == p1_score):
@@ -310,15 +311,14 @@ class ArtificialImmuneSystem():
         if(max_score == p2_score):
             return p2, p2_score
 
-        if(max_score == p3_score):
-            return p3, p3_score
+        # if(max_score == p3_score):
+        #     return p3, p3_score
         
-        if(max_score == p4_score):
-            return p4, p4_score
+        # if(max_score == p4_score):
+        #     return p4, p4_score
 
-        # if(max_score == p5_score):
-        #     print("P5 used")
-        #     return p5, p5_score
+        if(max_score == p5_score):
+            return p5, p5_score
 
         # if(max_score == p6_score):
         #     print("P6 used")
@@ -403,14 +403,14 @@ class ArtificialImmuneSystem():
     #K-folds         - the number of segments for k-fold cross validation
     #scorer          - the scoring metric when evaluating the dataset
 
-    def AIS(self, minorityDF, df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer,  min_change : float = 0.005, use_lof : bool = False):
+    def AIS(self, minorityDF, df, label, max_rounds, stopping_cond, totalPopulation, model, K_folds, scorer,  min_change : float = 0.005, use_lof : bool = False, mutation_rate : float = 1.0):
 
         #add code to find binary columns for creation
         binaryColumns = self.getBinaryColumns(minorityDF)
 
         current_population, bounds = self.Creation(minorityDF,totalPopulation,binaryColumns, weightingFunction='uniform')
         
-        antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+        antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
         
         count = 0
         no_change = 0
@@ -438,7 +438,7 @@ class ArtificialImmuneSystem():
 
                     #need to update bounds
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate=mutation_rate)
                     next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                     
                 else:
@@ -446,7 +446,7 @@ class ArtificialImmuneSystem():
                     no_change+=1
 
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate=mutation_rate)
                     next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                     
                 current_score = score #Score will only change if the new population is better than the old population
@@ -468,21 +468,21 @@ class ArtificialImmuneSystem():
 
                     #need to update bounds
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
                     
                 else:
 
                     no_change+=1
 
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
                     
                 current_score = score #Score will only change if the new population is better than the old population
 
         return current_population, count
 
 
-    def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer, min_change, use_lof):
+    def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer, min_change, use_lof, mutation_rate : float = 1.0):
         #preparedDF is the dataframe of features, labels is the dataframe of labels
         minorityDF = self.extractBinaryMinorityClass(preparedDF, labels)
         
@@ -491,7 +491,7 @@ class ArtificialImmuneSystem():
         #The number of elements we want to add to the minority class
         requiredPopulation = len(overallPopulation) - (len(minorityDF)*2)
         
-        oversamples,_ = self.AIS(minorityDF,overallPopulation,labels.columns, max_rounds,stopping_cond,requiredPopulation,model,K_folds,scorer, min_change, use_lof)
+        oversamples,_ = self.AIS(minorityDF,overallPopulation,labels.columns, max_rounds,stopping_cond,requiredPopulation,model,K_folds,scorer, min_change, use_lof, mutation_rate = mutation_rate)
         concatDF = pd.concat([overallPopulation,oversamples],ignore_index=True)
         return (self.separate_df(concatDF, labels.columns[0]))
         
