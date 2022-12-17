@@ -271,13 +271,13 @@ class ArtificialImmuneSystem():
 
         result = self.lof(df, antibody_population)
 
-        p1 = pd.concat([result[0],result[1],result[2],previous_result[3]],ignore_index=True)
-        p1_features, p1_labels = self.separate_df(p1, label_col=label)
-        p1_score = self.fitnessCV(model, original_features, original_labels, p1_features, p1_labels, scorer, K_folds)
+        # p1 = pd.concat([result[0],result[1],result[2],previous_result[3]],ignore_index=True)
+        # p1_features, p1_labels = self.separate_df(p1, label_col=label)
+        # p1_score = self.fitnessCV(model, original_features, original_labels, p1_features, p1_labels, scorer, K_folds)
 
-        p2 = pd.concat([result[0],previous_result[1],result[2],result[3]],ignore_index=True)
-        p2_features, p2_labels = self.separate_df(p2, label_col=label)
-        p2_score = self.fitnessCV(model, original_features, original_labels, p2_features, p2_labels, scorer, K_folds)
+        # p2 = pd.concat([result[0],previous_result[1],result[2],result[3]],ignore_index=True)
+        # p2_features, p2_labels = self.separate_df(p2, label_col=label)
+        # p2_score = self.fitnessCV(model, original_features, original_labels, p2_features, p2_labels, scorer, K_folds)
 
         # p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
         # p3_features, p3_labels = self.separate_df(p3, label_col=label)
@@ -293,23 +293,23 @@ class ArtificialImmuneSystem():
         p5_score = self.fitnessCV(model, original_features, original_labels, p5_features, p5_labels, scorer, K_folds)
 
         # #trying out other combinations (will nuke runtime)
-        # p6 = pd.concat([result[0],previous_result[1],previous_result[2],previous_result[3]],ignore_index=True)
-        # p6_features, p6_labels = self.separate_df(p6, label_col=label)
-        # p6_score = self.fitnessCV(model, original_features, original_labels, p6_features, p6_labels, scorer, K_folds)
+        p6 = pd.concat([result[0],previous_result[1],previous_result[2],previous_result[3]],ignore_index=True)
+        p6_features, p6_labels = self.separate_df(p6, label_col=label)
+        p6_score = self.fitnessCV(model, original_features, original_labels, p6_features, p6_labels, scorer, K_folds)
 
-        # p7 = pd.concat([previous_result[0],result[1],previous_result[2],previous_result[3]],ignore_index=True)
-        # p7_features, p7_labels = self.separate_df(p7, label_col=label)
-        # p7_score = self.fitnessCV(model, original_features, original_labels, p7_features, p7_labels, scorer, K_folds)
+        p7 = pd.concat([previous_result[0],result[1],previous_result[2],previous_result[3]],ignore_index=True)
+        p7_features, p7_labels = self.separate_df(p7, label_col=label)
+        p7_score = self.fitnessCV(model, original_features, original_labels, p7_features, p7_labels, scorer, K_folds)
 
         #scores = [p1_score,p2_score,p3_score,p4_score]
-        scores = [p1_score,p2_score]
+        scores = [p5_score,p6_score, p7_score]
         max_score = max(scores)
 
-        if(max_score == p1_score):
-            return p1, p1_score
+        # if(max_score == p1_score):
+        #     return p1, p1_score
             
-        if(max_score == p2_score):
-            return p2, p2_score
+        # if(max_score == p2_score):
+        #     return p2, p2_score
 
         # if(max_score == p3_score):
         #     return p3, p3_score
@@ -320,13 +320,11 @@ class ArtificialImmuneSystem():
         if(max_score == p5_score):
             return p5, p5_score
 
-        # if(max_score == p6_score):
-        #     print("P6 used")
-        #     return p6, p6_score
+        if(max_score == p6_score):
+            return p6, p6_score
 
-        # if(max_score == p7_score):
-        #     print("P7 used")
-        #     return p7, p7_score
+        if(max_score == p7_score):
+            return p7, p7_score
 
     def comparePopulations(self,population1, population2, labels1, labels2, estimator, iterations, scorer, min_change = 0.005):
         score1 = fmean(self.fitness(estimator, population1, labels1.values.ravel(), iterations, scorer))
