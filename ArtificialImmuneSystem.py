@@ -279,18 +279,18 @@ class ArtificialImmuneSystem():
         p2_features, p2_labels = self.separate_df(p2, label_col=label)
         p2_score = self.fitnessCV(model, original_features, original_labels, p2_features, p2_labels, scorer, K_folds)
 
-        p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
-        p3_features, p3_labels = self.separate_df(p3, label_col=label)
-        p3_score = self.fitnessCV(model, original_features, original_labels, p3_features, p3_labels, scorer, K_folds)
+        # p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
+        # p3_features, p3_labels = self.separate_df(p3, label_col=label)
+        # p3_score = self.fitnessCV(model, original_features, original_labels, p3_features, p3_labels, scorer, K_folds)
 
-        p4 = pd.concat([previous_result[0],result[1],result[2],result[3]],ignore_index=True)
-        p4_features, p4_labels = self.separate_df(p4, label_col=label)
-        p4_score = self.fitnessCV(model, original_features, original_labels, p4_features, p4_labels, scorer, K_folds)
+        # p4 = pd.concat([previous_result[0],result[1],result[2],result[3]],ignore_index=True)
+        # p4_features, p4_labels = self.separate_df(p4, label_col=label)
+        # p4_score = self.fitnessCV(model, original_features, original_labels, p4_features, p4_labels, scorer, K_folds)
 
 
-        # p5 = pd.concat([result[0],result[1],result[2],result[3]],ignore_index=True)
-        # p5_features, p5_labels = self.separate_df(p5, label_col=label)
-        # p5_score = self.fitnessCV(model, original_features, original_labels, p5_features, p5_labels, scorer, K_folds)
+        p5 = pd.concat([result[0],result[1],result[2],result[3]],ignore_index=True)
+        p5_features, p5_labels = self.separate_df(p5, label_col=label)
+        p5_score = self.fitnessCV(model, original_features, original_labels, p5_features, p5_labels, scorer, K_folds)
 
         # #trying out other combinations (will nuke runtime)
         # p6 = pd.concat([result[0],previous_result[1],previous_result[2],previous_result[3]],ignore_index=True)
@@ -301,7 +301,8 @@ class ArtificialImmuneSystem():
         # p7_features, p7_labels = self.separate_df(p7, label_col=label)
         # p7_score = self.fitnessCV(model, original_features, original_labels, p7_features, p7_labels, scorer, K_folds)
 
-        scores = [p1_score,p2_score,p3_score,p4_score]
+        #scores = [p1_score,p2_score,p3_score,p4_score]
+        scores = [p1_score,p2_score]
         max_score = max(scores)
 
         if(max_score == p1_score):
@@ -310,15 +311,14 @@ class ArtificialImmuneSystem():
         if(max_score == p2_score):
             return p2, p2_score
 
-        if(max_score == p3_score):
-            return p3, p3_score
+        # if(max_score == p3_score):
+        #     return p3, p3_score
         
-        if(max_score == p4_score):
-            return p4, p4_score
+        # if(max_score == p4_score):
+        #     return p4, p4_score
 
-        # if(max_score == p5_score):
-        #     print("P5 used")
-        #     return p5, p5_score
+        if(max_score == p5_score):
+            return p5, p5_score
 
         # if(max_score == p6_score):
         #     print("P6 used")
