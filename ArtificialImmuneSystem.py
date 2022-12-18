@@ -436,7 +436,7 @@ class ArtificialImmuneSystem():
 
                     #need to update bounds
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate=mutation_rate)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
                     next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                     
                 else:
@@ -444,7 +444,7 @@ class ArtificialImmuneSystem():
                     no_change+=1
 
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate=mutation_rate)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
                     next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                     
                 current_score = score #Score will only change if the new population is better than the old population
