@@ -204,6 +204,30 @@ class ArtificialImmuneSystem():
         #here I just took the mean of the array of all scores, could we use something else?
         return fmean(test_scores)
 
+    def fitnessCV2(self, model, label, original_df, population_features, population_labels, scorer, iterations):
+        
+        kf = KFold(n_splits=iterations)
+        score = 0 
+        for train,test in kf.split(original_df):
+
+            origin_train = original_df.iloc[train]
+            origin_test =  original_df.iloc[test]
+
+            origin_feat_train, origin_labels_train = self.separate_df(origin_train, label)
+            origin_feat_test, origin_labels_test = self.separate_df(origin_test, label)
+
+            train_features = pd.concat([origin_feat_train, population_features],ignore_index=True)
+            train_labels = pd.concat([origin_labels_train, population_labels],ignore_index=True)
+
+            model.fit(train_features, train_labels.values.ravel())
+            predictions = model.predict(origin_feat_test)
+
+            #need more params?
+            #TODO:hard coded f1_score, find a way to pass in function for scoring?
+            score += f1_score(origin_labels_test.values.ravel(), predictions)
+        
+        return (score/iterations)
+
 
     ####### Mutation ################
     def mutatePopulation (self, antiPopulation, bounds, binaryColumns : list, mutationRate : float = 1.0):
@@ -271,60 +295,95 @@ class ArtificialImmuneSystem():
 
         result = self.lof(df, antibody_population)
 
-        # p1 = pd.concat([result[0],result[1],result[2],previous_result[3]],ignore_index=True)
-        # p1_features, p1_labels = self.separate_df(p1, label_col=label)
-        # p1_score = self.fitnessCV(model, original_features, original_labels, p1_features, p1_labels, scorer, K_folds)
+        p1 = pd.concat([result[0],result[1],result[2],previous_result[3]],ignore_index=True)
+        p1_features, p1_labels = self.separate_df(p1, label_col=label)
+        p1_score = self.fitnessCV(model, original_features, original_labels, p1_features, p1_labels, scorer, K_folds)
 
-        # p2 = pd.concat([result[0],previous_result[1],result[2],result[3]],ignore_index=True)
-        # p2_features, p2_labels = self.separate_df(p2, label_col=label)
-        # p2_score = self.fitnessCV(model, original_features, original_labels, p2_features, p2_labels, scorer, K_folds)
+        p2 = pd.concat([result[0],previous_result[1],result[2],result[3]],ignore_index=True)
+        p2_features, p2_labels = self.separate_df(p2, label_col=label)
+        p2_score = self.fitnessCV(model, original_features, original_labels, p2_features, p2_labels, scorer, K_folds)
 
-        # p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
-        # p3_features, p3_labels = self.separate_df(p3, label_col=label)
-        # p3_score = self.fitnessCV(model, original_features, original_labels, p3_features, p3_labels, scorer, K_folds)
+        p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
+        p3_features, p3_labels = self.separate_df(p3, label_col=label)
+        p3_score = self.fitnessCV(model, original_features, original_labels, p3_features, p3_labels, scorer, K_folds)
 
-        # p4 = pd.concat([previous_result[0],result[1],result[2],result[3]],ignore_index=True)
-        # p4_features, p4_labels = self.separate_df(p4, label_col=label)
-        # p4_score = self.fitnessCV(model, original_features, original_labels, p4_features, p4_labels, scorer, K_folds)
+        p4 = pd.concat([previous_result[0],result[1],result[2],result[3]],ignore_index=True)
+        p4_features, p4_labels = self.separate_df(p4, label_col=label)
+        p4_score = self.fitnessCV(model, original_features, original_labels, p4_features, p4_labels, scorer, K_folds)
 
 
-        p5 = pd.concat([result[0],result[1],result[2],result[3]],ignore_index=True)
-        p5_features, p5_labels = self.separate_df(p5, label_col=label)
-        p5_score = self.fitnessCV(model, original_features, original_labels, p5_features, p5_labels, scorer, K_folds)
+        # p5 = pd.concat([result[0],result[1],result[2],result[3]],ignore_index=True)
+        # p5_features, p5_labels = self.separate_df(p5, label_col=label)
+        # p5_score = self.fitnessCV(model, original_features, original_labels, p5_features, p5_labels, scorer, K_folds)
 
-        # #trying out other combinations (will nuke runtime)
-        p6 = pd.concat([result[0],previous_result[1],previous_result[2],previous_result[3]],ignore_index=True)
-        p6_features, p6_labels = self.separate_df(p6, label_col=label)
-        p6_score = self.fitnessCV(model, original_features, original_labels, p6_features, p6_labels, scorer, K_folds)
+        # # #trying out other combinations (will nuke runtime)
+        # p6 = pd.concat([result[0],previous_result[1],previous_result[2],previous_result[3]],ignore_index=True)
+        # p6_features, p6_labels = self.separate_df(p6, label_col=label)
+        # p6_score = self.fitnessCV(model, original_features, original_labels, p6_features, p6_labels, scorer, K_folds)
 
-        p7 = pd.concat([previous_result[0],result[1],previous_result[2],previous_result[3]],ignore_index=True)
-        p7_features, p7_labels = self.separate_df(p7, label_col=label)
-        p7_score = self.fitnessCV(model, original_features, original_labels, p7_features, p7_labels, scorer, K_folds)
+        # p7 = pd.concat([previous_result[0],result[1],previous_result[2],previous_result[3]],ignore_index=True)
+        # p7_features, p7_labels = self.separate_df(p7, label_col=label)
+        # p7_score = self.fitnessCV(model, original_features, original_labels, p7_features, p7_labels, scorer, K_folds)
 
-        #scores = [p1_score,p2_score,p3_score,p4_score]
-        scores = [p5_score,p6_score, p7_score]
+        scores = [p1_score,p2_score,p3_score,p4_score]
+        #scores = [p5_score,p6_score, p7_score]
         max_score = max(scores)
 
-        # if(max_score == p1_score):
-        #     return p1, p1_score
+        if(max_score == p1_score):
+            return p1, p1_score
             
-        # if(max_score == p2_score):
-        #     return p2, p2_score
+        if(max_score == p2_score):
+            return p2, p2_score
 
-        # if(max_score == p3_score):
-        #     return p3, p3_score
+        if(max_score == p3_score):
+            return p3, p3_score
         
-        # if(max_score == p4_score):
-        #     return p4, p4_score
+        if(max_score == p4_score):
+            return p4, p4_score
 
-        if(max_score == p5_score):
-            return p5, p5_score
+        # if(max_score == p5_score):
+        #     return p5, p5_score
 
-        if(max_score == p6_score):
-            return p6, p6_score
+        # if(max_score == p6_score):
+        #     return p6, p6_score
 
-        if(max_score == p7_score):
-            return p7, p7_score
+        # if(max_score == p7_score):
+        #     return p7, p7_score
+
+    def get_best_populationV2(self,df, antibody_population, previous_result, label, model, K_folds, scorer):
+
+        result = self.lof(df, antibody_population)
+
+        p1 = pd.concat([result[0],result[1],result[2],previous_result[3]],ignore_index=True)
+        p1_features, p1_labels = self.separate_df(p1, label_col=label)
+        p1_score = self.fitnessCV2(model, label, df, p1_features, p1_labels, scorer, K_folds)
+
+        p2 = pd.concat([result[0],previous_result[1],result[2],result[3]],ignore_index=True)
+        p2_features, p2_labels = self.separate_df(p2, label_col=label)
+        p2_score = self.fitnessCV2(model, label, df, p2_features, p2_labels, scorer, K_folds)
+
+        p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
+        p3_features, p3_labels = self.separate_df(p3, label_col=label)
+        p3_score = self.fitnessCV2(model, label, df, p3_features, p3_labels, scorer, K_folds)
+
+        p4 = pd.concat([previous_result[0],result[1],result[2],result[3]],ignore_index=True)
+        p4_features, p4_labels = self.separate_df(p4, label_col=label)
+        p4_score = self.fitnessCV2(model, label, df, p4_features, p4_labels, scorer, K_folds)
+
+        scores = [p1_score,p2_score,p3_score,p4_score]
+        max_score = max(scores)
+
+        if(max_score == p1_score):
+            return p1, p1_score
+            
+        if(max_score == p2_score):
+            return p2, p2_score
+
+        if(max_score == p3_score):
+            return p3, p3_score
+        
+        if(max_score == p4_score):
+            return p4, p4_score
 
     def comparePopulations(self,population1, population2, labels1, labels2, estimator, iterations, scorer, min_change = 0.005):
         score1 = fmean(self.fitness(estimator, population1, labels1.values.ravel(), iterations, scorer))
@@ -344,6 +403,21 @@ class ArtificialImmuneSystem():
     def comparePopulationsCV(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations, scorer, min_change = 0.005):
         score1 = prev_score
         score2 = self.fitnessCV(estimator, original_features, original_labels, population_features, population_labels, scorer, iterations)
+        
+        print("score1: " +str(score1))
+        print("score2: " +str(score2))
+
+        
+        if abs(score1 - score2) < min_change:
+            return False, score1
+        elif (score1>score2):
+            return False, score1
+        else:
+            return True, score2
+        
+    def comparePopulationsCV2(self, prev_score, label, original_df, population_features, population_labels, estimator, iterations, scorer, min_change = 0.005):
+        score1 = prev_score
+        score2 = self.fitnessCV2(estimator, label, original_df, population_features, population_labels, scorer, iterations)
         
         print("score1: " +str(score1))
         print("score2: " +str(score2))
@@ -417,7 +491,8 @@ class ArtificialImmuneSystem():
         #created population split into features and labels
         current_gen, current_labels = self.separate_df(current_population, label_col=label)
 
-        current_score = self.fitnessCV(model, original_gen, original_labels, current_gen, current_labels, scorer, K_folds)
+        #current_score = self.fitnessCV(model, original_gen, original_labels, current_gen, current_labels, scorer, K_folds)
+        current_score = self.fitnessCV2(model,label, df, current_gen, current_labels, scorer, K_folds)
 
         # #the next generation antibody population concatenated to the original dataframe
         # next_df = pd.concat([df,antibody_population],ignore_index=True) #TODO:REMOVE
@@ -427,7 +502,8 @@ class ArtificialImmuneSystem():
         if(use_lof==False):
             while( (count < max_rounds) and (no_change < stopping_cond) ):
                 count+=1
-                change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer, min_change)
+                #change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer, min_change)
+                change_flg, score = self.comparePopulationsCV2(current_score, label, df, next_gen, next_labels, model, K_folds, scorer, min_change)
                 if (change_flg):
                     
                     no_change = 0
@@ -455,7 +531,7 @@ class ArtificialImmuneSystem():
             while( (count < max_rounds) and (no_change < stopping_cond) ):
 
                 count+=1
-                best_population, best_population_score = self.get_best_population(df, original_gen, original_labels, antibody_population, current_population_lof, label, model, K_folds, scorer)
+                best_population, best_population_score = self.get_best_populationV2(df, antibody_population, current_population_lof, label, model, K_folds, scorer)
                 change_flg, score = self.comparePopulations_lof(best_population_score, current_score, min_change)
                 if (change_flg):
                     
