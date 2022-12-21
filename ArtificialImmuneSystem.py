@@ -154,56 +154,29 @@ class ArtificialImmuneSystem():
     #Original features, original labels are the original df before any oversampling
     #Population_features, population_labels are the generated population we want to evaluate
     #Here scorer has to be a function that takes y_pred, y_true and returns a score, not implemented yet
-    def fitnessCV(self, model, original_features, original_labels, population_features, population_labels, scorer, iterations):
-        #TODO: train_features or train_labels had 1 extra row, need to fix
-        #train test split makes train set smaller, we should sample the population based on he difference of the majority class and minority class in origin_feat_train
-        origin_feat_train, origin_feat_test, origin_labels_train, origin_labels_test = train_test_split(original_features, original_labels, test_size=0.2)
+    def fitnessCV(self, model, label, original_df, population_features, population_labels, scorer, iterations):
         
-        #print("origin_feat_train before: ", origin_feat_train.shape)
-        #print("origin_labels_train before: ", Counter(origin_labels_train['5']))
-        #Expand the size of origin_feat_train by to match the size of original features
-        needed_rows = len(original_features) - len(origin_feat_train)
-        sample_train = (pd.concat([origin_feat_train, origin_labels_train], axis=1))
-        sample_train = sample_train.sample(n=needed_rows, replace=False, ignore_index=True)
+        kf = KFold(n_splits=iterations)
+        score = 0 
+        for train,test in kf.split(original_df):
 
+            origin_train = original_df.iloc[train]
+            origin_test =  original_df.iloc[test]
 
-        origin_feat_train = pd.concat([origin_feat_train, sample_train[original_features.columns.values]], ignore_index=True)
-        origin_labels_train = pd.concat([origin_labels_train, sample_train[original_labels.columns.values]], ignore_index=True)
-        #print("origin_feat_train after: ", origin_feat_train.shape)
-        #print("population_features: ", population_features.shape)
-        #print("origin_labels_train after: ", Counter(origin_labels_train['5']))
+            origin_feat_train, origin_labels_train = self.separate_df(origin_train, label)
+            origin_feat_test, origin_labels_test = self.separate_df(origin_test, label)
 
-        train_features = pd.concat([origin_feat_train, population_features],ignore_index=True)
-        train_labels = pd.concat([origin_labels_train, population_labels],ignore_index=True)
+            train_features = pd.concat([origin_feat_train, population_features],ignore_index=True)
+            train_labels = pd.concat([origin_labels_train, population_labels],ignore_index=True)
+
+            model.fit(train_features, train_labels.values.ravel())
+            predictions = model.predict(origin_feat_test)
+
+            #need more params?
+            #TODO:hard coded f1_score, find a way to pass in function for scoring?
+            score += f1_score(origin_labels_test.values.ravel(), predictions)
         
-        #look into group parameter of cross_validate
-        #here scoring can be multiple values
-        
-        cval_scores = cross_validate(model, train_features, train_labels.values.ravel(), scoring = scorer, cv = iterations, return_train_score = True, return_estimator = True)
-
-        #look at format of scores, get estimators and use them to predict test
-
-        test_scores = []
-        cval_test_scores =cval_scores['test_score']
-        count = 0 
-        for estimator in cval_scores['estimator']:
-            
-            estimator.fit(train_features, train_labels.values.ravel())
-            predictions = estimator.predict(origin_feat_test)
-
-            #hard coded f1_score, find a way to pass in function for scoring?
-            score = f1_score(origin_labels_test, predictions) 
-
-            #here I just took the mean of the 2 scores, could we use something else?
-            #using other splits did not change much
-            mean_score = (score + cval_test_scores[count])/2
-            
-            count+=1
-            test_scores.append(mean_score)
-        
-        #here I just took the mean of the array of all scores, could we use something else?
-        return fmean(test_scores)
-
+        return (score/iterations)
 
     ####### Mutation ################
     def mutatePopulation (self, antiPopulation, bounds, binaryColumns : list, mutationRate : float = 1.0):
@@ -267,42 +240,27 @@ class ArtificialImmuneSystem():
 
         return result
 
-    def get_best_population(self,df, original_features, original_labels, antibody_population, previous_result, label, model, K_folds, scorer):
+    def get_best_population(self,df, antibody_population, previous_result, label, model, K_folds, scorer):
 
         result = self.lof(df, antibody_population)
 
         p1 = pd.concat([result[0],result[1],result[2],previous_result[3]],ignore_index=True)
         p1_features, p1_labels = self.separate_df(p1, label_col=label)
-        p1_score = self.fitnessCV(model, original_features, original_labels, p1_features, p1_labels, scorer, K_folds)
+        p1_score = self.fitnessCV(model, label, df, p1_features, p1_labels, scorer, K_folds)
 
         p2 = pd.concat([result[0],previous_result[1],result[2],result[3]],ignore_index=True)
         p2_features, p2_labels = self.separate_df(p2, label_col=label)
-        p2_score = self.fitnessCV(model, original_features, original_labels, p2_features, p2_labels, scorer, K_folds)
+        p2_score = self.fitnessCV(model, label, df, p2_features, p2_labels, scorer, K_folds)
 
         p3 = pd.concat([result[0],result[1],previous_result[2],result[3]],ignore_index=True)
         p3_features, p3_labels = self.separate_df(p3, label_col=label)
-        p3_score = self.fitnessCV(model, original_features, original_labels, p3_features, p3_labels, scorer, K_folds)
+        p3_score = self.fitnessCV(model, label, df, p3_features, p3_labels, scorer, K_folds)
 
         p4 = pd.concat([previous_result[0],result[1],result[2],result[3]],ignore_index=True)
         p4_features, p4_labels = self.separate_df(p4, label_col=label)
-        p4_score = self.fitnessCV(model, original_features, original_labels, p4_features, p4_labels, scorer, K_folds)
-
-
-        # p5 = pd.concat([result[0],result[1],result[2],result[3]],ignore_index=True)
-        # p5_features, p5_labels = self.separate_df(p5, label_col=label)
-        # p5_score = self.fitnessCV(model, original_features, original_labels, p5_features, p5_labels, scorer, K_folds)
-
-        # # #trying out other combinations (will nuke runtime)
-        # p6 = pd.concat([result[0],previous_result[1],previous_result[2],previous_result[3]],ignore_index=True)
-        # p6_features, p6_labels = self.separate_df(p6, label_col=label)
-        # p6_score = self.fitnessCV(model, original_features, original_labels, p6_features, p6_labels, scorer, K_folds)
-
-        # p7 = pd.concat([previous_result[0],result[1],previous_result[2],previous_result[3]],ignore_index=True)
-        # p7_features, p7_labels = self.separate_df(p7, label_col=label)
-        # p7_score = self.fitnessCV(model, original_features, original_labels, p7_features, p7_labels, scorer, K_folds)
+        p4_score = self.fitnessCV(model, label, df, p4_features, p4_labels, scorer, K_folds)
 
         scores = [p1_score,p2_score,p3_score,p4_score]
-        #scores = [p5_score,p6_score, p7_score]
         max_score = max(scores)
 
         if(max_score == p1_score):
@@ -316,16 +274,7 @@ class ArtificialImmuneSystem():
         
         if(max_score == p4_score):
             return p4, p4_score
-
-        # if(max_score == p5_score):
-        #     return p5, p5_score
-
-        # if(max_score == p6_score):
-        #     return p6, p6_score
-
-        # if(max_score == p7_score):
-        #     return p7, p7_score
-
+    
     def comparePopulations(self,population1, population2, labels1, labels2, estimator, iterations, scorer, min_change = 0.005):
         score1 = fmean(self.fitness(estimator, population1, labels1.values.ravel(), iterations, scorer))
         score2 = fmean(self.fitness(estimator, population2, labels2.values.ravel(), iterations, scorer))
@@ -341,9 +290,9 @@ class ArtificialImmuneSystem():
     # original features and original labels are the original df split into features and labels
     # population features and population labels are the population df split into features and labels, this is the new population we mutated this round
     # estimator, iterations, scorer not changed from old compare populaitons
-    def comparePopulationsCV(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations, scorer, min_change = 0.005):
+    def comparePopulationsCV(self, prev_score, label, original_df, population_features, population_labels, estimator, iterations, scorer, min_change = 0.005):
         score1 = prev_score
-        score2 = self.fitnessCV(estimator, original_features, original_labels, population_features, population_labels, scorer, iterations)
+        score2 = self.fitnessCV(estimator, label, original_df, population_features, population_labels, scorer, iterations)
         
         print("score1: " +str(score1))
         print("score2: " +str(score2))
@@ -417,7 +366,8 @@ class ArtificialImmuneSystem():
         #created population split into features and labels
         current_gen, current_labels = self.separate_df(current_population, label_col=label)
 
-        current_score = self.fitnessCV(model, original_gen, original_labels, current_gen, current_labels, scorer, K_folds)
+        #current_score = self.fitnessCV(model, original_gen, original_labels, current_gen, current_labels, scorer, K_folds)
+        current_score = self.fitnessCV(model,label, df, current_gen, current_labels, scorer, K_folds)
 
         # #the next generation antibody population concatenated to the original dataframe
         # next_df = pd.concat([df,antibody_population],ignore_index=True) #TODO:REMOVE
@@ -427,7 +377,8 @@ class ArtificialImmuneSystem():
         if(use_lof==False):
             while( (count < max_rounds) and (no_change < stopping_cond) ):
                 count+=1
-                change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer, min_change)
+                #change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer, min_change)
+                change_flg, score = self.comparePopulationsCV(current_score, label, df, next_gen, next_labels, model, K_folds, scorer, min_change)
                 if (change_flg):
                     
                     no_change = 0
@@ -455,7 +406,7 @@ class ArtificialImmuneSystem():
             while( (count < max_rounds) and (no_change < stopping_cond) ):
 
                 count+=1
-                best_population, best_population_score = self.get_best_population(df, original_gen, original_labels, antibody_population, current_population_lof, label, model, K_folds, scorer)
+                best_population, best_population_score = self.get_best_population(df, antibody_population, current_population_lof, label, model, K_folds, scorer)
                 change_flg, score = self.comparePopulations_lof(best_population_score, current_score, min_change)
                 if (change_flg):
                     
@@ -466,19 +417,18 @@ class ArtificialImmuneSystem():
 
                     #need to update bounds
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
                     
                 else:
 
                     no_change+=1
 
                     bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
+                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
                     
                 current_score = score #Score will only change if the new population is better than the old population
 
         return current_population, count
-
 
     def AIS_Resample(self, preparedDF, labels, max_rounds, stopping_cond, model, K_folds, scorer, min_change, use_lof, mutation_rate : float = 1.0):
         #preparedDF is the dataframe of features, labels is the dataframe of labels
