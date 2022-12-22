@@ -298,12 +298,18 @@ class ArtificialImmuneSystem():
         print("score2: " +str(score2))
 
         
-        if abs(score1 - score2) < min_change:
-            return False, score1
-        elif (score1>score2):
-            return False, score1
-        else:
+        # if abs(score1 - score2) < min_change:
+        #     return False, score1
+        # elif (score1>score2):
+        #     return False, score1
+        # else:
+        #     return True, score2
+        
+        if (score2 - score1) >= min_change:
             return True, score2
+        else:
+            return False, score1
+
 
 
     def comparePopulationsBasic(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations=-1, scorer='', min_change = 0.005):
@@ -313,22 +319,35 @@ class ArtificialImmuneSystem():
         print("score1: " +str(score1))
         print("score2: " +str(score2))
 
-        if abs(score1 - score2) < min_change:
-            return False, score1
-        elif (score1>score2):
-            return False, score1
-        else:
+        # if abs(score1 - score2) < min_change:
+        #     return False, score1
+        # elif (score1>score2):
+        #     return False, score1
+        # else:
+        #     return True, score2
+
+        if (score2 - score1) >= min_change:
             return True, score2
+        else:
+            return False, score1
+
         
     def comparePopulations_lof( self, population_score, old_score, min_change):
         print("old_score: " +str(old_score))
         print("population_score: " +str(population_score))
-        if abs(population_score - old_score) < min_change:
-            return False, old_score
-        elif (old_score > population_score):
-            return False, old_score
-        else:
+        
+        # if abs(population_score - old_score) < min_change:
+        #     return False, old_score
+        # elif (old_score > population_score):
+        #     return False, old_score
+        # else:
+        #     return True, population_score
+
+        if (population_score - old_score) >= min_change:
             return True, population_score
+        else:
+            return False, old_score
+
     
     #separate a df into features and labels
     def separate_df(self, df, label_col):
