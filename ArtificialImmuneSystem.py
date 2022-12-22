@@ -335,7 +335,7 @@ class ArtificialImmuneSystem():
     def comparePopulations_lof( self, population_score, old_score, min_change):
         print("old_score: " +str(old_score))
         print("population_score: " +str(population_score))
-        
+
         # if abs(population_score - old_score) < min_change:
         #     return False, old_score
         # elif (old_score > population_score):
@@ -376,7 +376,7 @@ class ArtificialImmuneSystem():
 
         current_population, bounds = self.Creation(minorityDF,totalPopulation,binaryColumns, weightingFunction='uniform')
         
-        antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
+        #antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
         
         count = 0
         no_change = 0
@@ -396,26 +396,22 @@ class ArtificialImmuneSystem():
         if(use_lof==False):
             while( (count < max_rounds) and (no_change < stopping_cond) ):
                 count+=1
-                #change_flg, score = self.comparePopulationsCV(current_score, original_gen, original_labels, next_gen, next_labels, model, K_folds, scorer, min_change)
+
+                bounds = self.get_bounds(current_population)
+                antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
+                next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                 change_flg, score = self.comparePopulationsCV(current_score, label, df, next_gen, next_labels, model, K_folds, scorer, min_change)
+                
                 if (change_flg):
                     
                     no_change = 0
 
                     current_population = antibody_population.copy()
 
-                    #need to update bounds
-                    bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
-                    next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                     
                 else:
 
                     no_change+=1
-
-                    bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
-                    next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
                     
                 current_score = score #Score will only change if the new population is better than the old population
         
@@ -425,6 +421,8 @@ class ArtificialImmuneSystem():
             while( (count < max_rounds) and (no_change < stopping_cond) ):
 
                 count+=1
+                bounds = self.get_bounds(current_population)
+                antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
                 best_population, best_population_score = self.get_best_population(df, antibody_population, current_population_lof, label, model, K_folds, scorer)
                 change_flg, score = self.comparePopulations_lof(best_population_score, current_score, min_change)
                 if (change_flg):
@@ -433,17 +431,11 @@ class ArtificialImmuneSystem():
 
                     current_population = best_population.copy()
                     current_population_lof = self.lof( df, current_population)
-
-                    #need to update bounds
-                    bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
                     
                 else:
 
                     no_change+=1
 
-                    bounds = self.get_bounds(current_population)
-                    antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
                     
                 current_score = score #Score will only change if the new population is better than the old population
 
