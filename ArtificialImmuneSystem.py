@@ -391,7 +391,7 @@ class ArtificialImmuneSystem():
         # #the next generation antibody population concatenated to the original dataframe
         # next_df = pd.concat([df,antibody_population],ignore_index=True) #TODO:REMOVE
         #next_df split into features and labels
-        next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
+        #next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
 
         if(use_lof==False):
             while( (count < max_rounds) and (no_change < stopping_cond) ):
