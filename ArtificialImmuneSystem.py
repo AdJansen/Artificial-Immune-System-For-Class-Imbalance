@@ -119,19 +119,6 @@ class ArtificialImmuneSystem():
 
 
     ####### Fitness ################
-    def fitness(self, model, feat, label, iterations, scorer):
-        #scorer is the name of the function wee aree using to evaluate our dataset
-        #it should be a function with signature scorer(model, feature, label) which should return only a single value.
-        return cross_val_score(model, feat, label, cv = iterations, scoring = scorer)
-
-    def distance(self, x, y, metric):
-        
-        #get the distance between two sets of data x and y, they should be the same size
-        #metric is the string metric to be used to measure distance
-
-        dist = DistanceMetric.get_metric(metric)
-        return dist.pairwise(x,y)
-
     #Original features, original labels are the original df before any oversampling
     #Population_features, population_labels are the generated population we want to evaluate
     #Here scorer has to be a function that takes y_pred, y_true and returns a score, not implemented yet
@@ -294,17 +281,6 @@ class ArtificialImmuneSystem():
         score1 = prev_score
         score2 = self.fitnessCV(estimator, label, original_df, population_features, population_labels, scorer, iterations)
         
-        print("score1: " +str(score1))
-        print("score2: " +str(score2))
-
-        
-        # if abs(score1 - score2) < min_change:
-        #     return False, score1
-        # elif (score1>score2):
-        #     return False, score1
-        # else:
-        #     return True, score2
-        
         if (score2 - score1) >= min_change:
             return True, score2
         else:
@@ -315,16 +291,6 @@ class ArtificialImmuneSystem():
     def comparePopulationsBasic(self, prev_score, original_features, original_labels, population_features, population_labels, estimator, iterations=-1, scorer='', min_change = 0.005):
         score1 = prev_score
         score2 = self.fitnessBasic(estimator, original_features, original_labels, population_features, population_labels)
-        
-        print("score1: " +str(score1))
-        print("score2: " +str(score2))
-
-        # if abs(score1 - score2) < min_change:
-        #     return False, score1
-        # elif (score1>score2):
-        #     return False, score1
-        # else:
-        #     return True, score2
 
         if (score2 - score1) >= min_change:
             return True, score2
@@ -333,15 +299,6 @@ class ArtificialImmuneSystem():
 
         
     def comparePopulations_lof( self, population_score, old_score, min_change):
-        print("old_score: " +str(old_score))
-        print("population_score: " +str(population_score))
-
-        # if abs(population_score - old_score) < min_change:
-        #     return False, old_score
-        # elif (old_score > population_score):
-        #     return False, old_score
-        # else:
-        #     return True, population_score
 
         if (population_score - old_score) >= min_change:
             return True, population_score
@@ -376,22 +333,12 @@ class ArtificialImmuneSystem():
 
         current_population, bounds = self.Creation(minorityDF,totalPopulation,binaryColumns, weightingFunction='uniform')
         
-        #antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutationRate=mutation_rate)
-        
         count = 0
         no_change = 0
 
-        original_gen, original_labels = self.separate_df(df, label)
         #created population split into features and labels
         current_gen, current_labels = self.separate_df(current_population, label_col=label)
-
-        #current_score = self.fitnessCV(model, original_gen, original_labels, current_gen, current_labels, scorer, K_folds)
         current_score = self.fitnessCV(model,label, df, current_gen, current_labels, scorer, K_folds)
-
-        # #the next generation antibody population concatenated to the original dataframe
-        # next_df = pd.concat([df,antibody_population],ignore_index=True) #TODO:REMOVE
-        #next_df split into features and labels
-        #next_gen, next_labels = self.separate_df(antibody_population, label_col=label)
 
         if(use_lof==False):
             while( (count < max_rounds) and (no_change < stopping_cond) ):
@@ -403,14 +350,11 @@ class ArtificialImmuneSystem():
                 change_flg, score = self.comparePopulationsCV(current_score, label, df, next_gen, next_labels, model, K_folds, scorer, min_change)
                 
                 if (change_flg):
-                    
                     no_change = 0
-
                     current_population = antibody_population.copy()
 
                     
                 else:
-
                     no_change+=1
                     
                 current_score = score #Score will only change if the new population is better than the old population
@@ -419,21 +363,20 @@ class ArtificialImmuneSystem():
             
             current_population_lof = self.lof(df, current_population)
             while( (count < max_rounds) and (no_change < stopping_cond) ):
-
                 count+=1
+
                 bounds = self.get_bounds(current_population)
                 antibody_population = self.mutatePopulation(current_population,bounds,binaryColumns, mutation_rate)
                 best_population, best_population_score = self.get_best_population(df, antibody_population, current_population_lof, label, model, K_folds, scorer)
                 change_flg, score = self.comparePopulations_lof(best_population_score, current_score, min_change)
+
                 if (change_flg):
-                    
                     no_change = 0
 
                     current_population = best_population.copy()
                     current_population_lof = self.lof( df, current_population)
                     
                 else:
-
                     no_change+=1
 
                     
